@@ -1,83 +1,129 @@
 <template>
-  <v-row justify="center" align="center">
-    <v-col cols="12" sm="8" md="6">
-      <v-card class="logo py-4 d-flex justify-center">
-        <NuxtLogo />
-        <VuetifyLogo />
-      </v-card>
-      <v-card>
-        <v-card-title class="headline">
-          Welcome to the Vuetify + Nuxt.js template
-        </v-card-title>
-        <v-card-text>
-          <p>Vuetify is a progressive Material Design component framework for Vue.js. It was designed to empower developers to create amazing applications.</p>
-          <p>
-            For more information on Vuetify, check out the <a
-              href="https://vuetifyjs.com"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              documentation
-            </a>.
-          </p>
-          <p>
-            If you have questions, please join the official <a
-              href="https://chat.vuetifyjs.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="chat"
-            >
-              discord
-            </a>.
-          </p>
-          <p>
-            Find a bug? Report it on the github <a
-              href="https://github.com/vuetifyjs/vuetify/issues"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="contribute"
-            >
-              issue board
-            </a>.
-          </p>
-          <p>Thank you for developing with Vuetify and I look forward to bringing more exciting features in the future.</p>
-          <div class="text-xs-right">
-            <em><small>&mdash; John Leider</small></em>
-          </div>
-          <hr class="my-3">
-          <a
-            href="https://nuxtjs.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Nuxt Documentation
-          </a>
-          <br>
-          <a
-            href="https://github.com/nuxt/nuxt.js"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Nuxt GitHub
-          </a>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn
-            color="primary"
-            nuxt
-            to="/inspire"
-          >
-            Continue
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-col>
-  </v-row>
+    <div>
+        <v-switch :value="$vuetify.theme.dark" @click="$vuetify.theme.dark = !$vuetify.theme.dark" />
+        <v-data-table :headers="headers" :items="data" :loading="loading" item-key="name" class="cryptomarket elevation-1">
+            <template v-slot:item.current_price="{ item }">
+                {{ item.current_price }}
+            </template>
+            <template v-slot:item.name="{ item }">
+                <div class="h-flex h-center max-w-fit">
+                    <img :src="item.image" width="24" max-width="24" height="24" />
+                    <div class="mr-5">
+                        <div>
+                            {{ faNames[item.symbol] || item.name }}
+                        </div>
+                        <div class="grey--text">
+                            {{ item.symbol }}
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </v-data-table>
+    </div>
 </template>
-
 <script>
 export default {
-  name: 'IndexPage'
+    data() {
+        return {
+            data: [],
+            headers: [
+                { text: '#', value: 'market_cap_rank', width: 20 },
+                { text: 'ارز دیجیتال', value: 'name' },
+                { text: 'قیمت', value: 'current_price' },
+            ],
+            interval: null,
+            loading: false,
+            faNames: {
+                ada: "کاردانو",
+                alice: "آلیس",
+                atom: "اتم",
+                axs: "آکسی",
+                bch: "بیت کوین کش",
+                bnb: "بایننس کوین",
+                btc: "بیت کوین",
+                btt: "بیت تورنت",
+                cake: "پنکیک‌سواپ",
+                chz: "چیلیز",
+                dash: "دش",
+                doge: "دوج کوین",
+                dot: "پولکادات",
+                enj: "انجین",
+                eos: "ایاس",
+                eth: "اتریوم",
+                fil: "فایل کوین",
+                ftm: "فانتوم",
+                link: "چین‌لینک",
+                ltc: "لایت کوین",
+                mana: " مانا",
+                matic: "ماتیک",
+                rune: "تورچین",
+                sand: "سندباکس",
+                shib: "شیبا",
+                trx: "ترون",
+                uni: "یونی سواپ",
+                usdt: "تتر",
+                xlm: "استلار",
+                xrp: "ریپل",
+                sol: "سولانا",
+                dai: "دای",
+                avax: "اوالانچ"
+            }
+        }
+    },
+
+    mounted() {
+        this.fetch()
+        this.interval = setInterval(() => {
+            this.fetch()
+        }, 10000);
+        this.$axios.get('https://api.wallex.ir/v1/currencies/stats')
+        .then(res => {
+            let sag = [];
+            res.data.result.map(c => {
+                sag[c.key.toLowerCase()] = c.name
+            });
+            console.log(sag);
+        })
+    },
+    
+    beforeDestroy() {
+        this.interval && clearInterval(this.interval)
+    },
+
+    methods: {
+        fetch() {
+            // this.loading = true
+            this.$axios('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=true')
+            .then(res => {
+                this.data = res.data
+                // this.loading = false
+            })
+            .catch(err => {
+                console.log(err);
+            })
+        },
+
+        money(amount) {
+            if (amount === null || amount === undefined || amount === '')
+            return '';
+            
+            try {
+                const thousands = "٫";
+                const negativeSign = amount < 0 ? "-" : "";
+                let i = (amount < 0 ? amount * -1 : amount) + "";
+                let j = (i.length > 3) ? i.length % 3 : 0;
+                return (negativeSign + (j ? i.slice(0, j) + thousands : '') + i.slice(j).replace(/(\d{3})(?=\d)/g, "$1" + thousands));
+            } catch (e) {
+                return "NaN";
+            }
+        }
+    }
 }
 </script>
+<style lang="scss">
+    .cryptomarket {
+        &.v-data-table > .v-data-table__wrapper > table > tbody > tr > td {
+            height: 80px;
+        }
+    }
+</style>
