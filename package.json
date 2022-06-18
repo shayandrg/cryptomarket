@@ -18,6 +18,7 @@
     "webpack": "^4.46.0"
   },
   "devDependencies": {
-    "@nuxtjs/vuetify": "^1.12.3"
+    "@nuxtjs/vuetify": "^1.12.3",
+    "@nuxtjs/tailwindcss": "^5.0.2"
   }
 }
