@@ -1,24 +1,26 @@
 <template>
     <div>
         <div class="h-flex items-center justify-between my-10">
-            <div class="h-flex">
+            <div class="h-flex h-center">
                 <v-icon dense>mdi-weather-night</v-icon>
-                <v-switch inset :value="!$vuetify.theme.dark" @click="$vuetify.theme.dark = !$vuetify.theme.dark" />
+                <v-switch inset class="mr-1" :value="!$vuetify.theme.dark" @click="$vuetify.theme.dark = !$vuetify.theme.dark" />
                 <v-icon dense>mdi-weather-sunny</v-icon>
+                <v-btn-toggle class="mr-5" v-model="cryptoShow" mandatory dense>
+                    <v-btn rounded value="hits">داغ ترین ها</v-btn>
+                    <v-btn rounded value="favorites">منتخب من</v-btn>
+                </v-btn-toggle>
             </div>
             <div>
                 پایه قیمت
-                <v-btn-toggle v-model="showCurrency" mandatory dense>
+                <v-btn-toggle class="mr-1" v-model="showCurrency" mandatory dense>
                     <v-btn>تومان</v-btn>
                     <v-btn>USDT</v-btn>
                 </v-btn-toggle>
             </div>
         </div>
-        <v-data-table :headers="headers" :items="data" :loading="loading" item-key="name" class="cryptomarket elevation-1">
+        <v-data-table :headers="headers" :items="itemsToShow" :loading="loading || !data.length" loading-text="در حال دریافت داده ها..." item-key="name" class="cryptomarket elevation-1">
             <template v-slot:item.favorite="{ item }">
-                <div :class="{ 'en-num': showCurrency }">
-                    <v-icon @click="weather-sunny">mdi-star</v-icon>
-                </div>
+                <v-icon :color="favorites.indexOf(item.symbol) !== -1 ? 'amber' : 'grey'" @click="favorite(item.symbol)">{{ favorites.indexOf(item.symbol) !== -1 ? 'mdi-star' : 'mdi-star-outline' }}</v-icon>
             </template>
             <template v-slot:item.current_price="{ item }">
                 <div :class="{ 'en-num': showCurrency }">
@@ -50,6 +52,15 @@
             </template>
             <template v-slot:item.sparkline_in_7d="{ item }">
                 <v-sparkline auto-draw :value="item.sparkline_in_7d.price" :color="item.price_change_percentage_7d_in_currency < 0 ? 'red accent-2' : 'teal accent-3'" line-width="3" />
+            </template>
+            <template v-slot:no-data>
+                <div>
+                    <div v-if="cryptoShow == 'favorites'" class="py-32" :class="{ 'white--text': $vuetify.theme.dark, 'grey--text text--darken-2': !$vuetify.theme.dark }">
+                        <v-btn fab :color="$vuetify.theme.dark ? 'grey darken-3' : 'grey lighten-3'" elevation="0" width="100" height="100"><v-icon color="amber" size="72">mdi-star</v-icon></v-btn>
+                        <div class="my-7 font-bold text-2xl ">لیست منتخب شما خالی است.</div>
+                        <div>ارز های منتخبتان را با زدن روی <v-icon>mdi-star-outline</v-icon> می‌توانید به این لیست اضافه کنید.</div>
+                    </div>
+                </div>
             </template>
         </v-data-table>
     </div>
@@ -107,16 +118,25 @@ export default {
             },
             showCurrency: 0,
             currency: Intl.NumberFormat('en-US'),
+            favorites: [],
+            cryptoShow: 'hits'
         }
     },
 
     computed:{
         price() {
             return price => this.showCurrency ? `$${this.currency.format(price)}` : `${this.currency.format(price * 32000)} تومان`
+        },
+        itemsToShow() {
+            if (this.cryptoShow == 'favorites') {
+                return this.data.filter(coin => this.favorites.indexOf(coin.symbol) !== -1)
+            }
+            return this.data
         }
     },
 
     mounted() {
+        this.favorite()
         this.fetch()
         this.interval = setInterval(() => {
             this.fetch()
@@ -153,6 +173,21 @@ export default {
             } catch (e) {
                 return "NaN";
             }
+        },
+
+        favorite(symbol = null) {
+            var item = localStorage.getItem("favorites")
+            if (item === undefined || item === null) {
+                localStorage.setItem("favorites", JSON.stringify([]));
+                item = localStorage.getItem("favorites")
+            }
+            item = JSON.parse(item)
+            if (symbol !== null) {
+                let index = item.indexOf(symbol)
+                index !== -1 ? item.splice(index, 1) : item.push(symbol)
+            }
+            this.favorites = item
+            localStorage.setItem("favorites", JSON.stringify(item))
         }
     }
 }
