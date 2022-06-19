@@ -1,9 +1,29 @@
 <template>
     <div>
-        <v-switch :value="$vuetify.theme.dark" @click="$vuetify.theme.dark = !$vuetify.theme.dark" />
+        <div class="h-flex items-center justify-between my-10">
+            <div class="h-flex">
+                <v-icon dense>mdi-weather-night</v-icon>
+                <v-switch inset :value="!$vuetify.theme.dark" @click="$vuetify.theme.dark = !$vuetify.theme.dark" />
+                <v-icon dense>mdi-weather-sunny</v-icon>
+            </div>
+            <div>
+                پایه قیمت
+                <v-btn-toggle v-model="showCurrency" mandatory dense>
+                    <v-btn>تومان</v-btn>
+                    <v-btn>USDT</v-btn>
+                </v-btn-toggle>
+            </div>
+        </div>
         <v-data-table :headers="headers" :items="data" :loading="loading" item-key="name" class="cryptomarket elevation-1">
+            <template v-slot:item.favorite="{ item }">
+                <div :class="{ 'en-num': showCurrency }">
+                    <v-icon @click="weather-sunny">mdi-star</v-icon>
+                </div>
+            </template>
             <template v-slot:item.current_price="{ item }">
-                {{ item.current_price }}
+                <div :class="{ 'en-num': showCurrency }">
+                    {{ price(item.current_price) }}
+                </div>
             </template>
             <template v-slot:item.name="{ item }">
                 <div class="h-flex h-center max-w-fit">
@@ -18,6 +38,19 @@
                     </div>
                 </div>
             </template>
+            <template v-slot:item.price_change_percentage_24h="{ item }">
+                <div :class="item.price_change_percentage_24h < 0 ? 'red--text text--accent-2' : 'teal--text text--accent-3'" class="percent">
+                    {{ `${item.price_change_percentage_24h > 0 ? '+' : ''}${item.price_change_percentage_24h.toFixed(2)}%` }}
+                </div>
+            </template>
+            <template v-slot:item.total_volume="{ item }">
+                <div :class="{ 'en-num': showCurrency }">
+                    {{ price(item.total_volume) }}
+                </div>
+            </template>
+            <template v-slot:item.sparkline_in_7d="{ item }">
+                <v-sparkline auto-draw :value="item.sparkline_in_7d.price" :color="item.price_change_percentage_7d_in_currency < 0 ? 'red accent-2' : 'teal accent-3'" line-width="3" />
+            </template>
         </v-data-table>
     </div>
 </template>
@@ -27,9 +60,13 @@ export default {
         return {
             data: [],
             headers: [
+                { text: '', value: 'favorite', width: 20 },
                 { text: '#', value: 'market_cap_rank', width: 20 },
                 { text: 'ارز دیجیتال', value: 'name' },
                 { text: 'قیمت', value: 'current_price' },
+                { text: 'تغییرات (24h)', value: 'price_change_percentage_24h' },
+                { text: 'حجم معاملات (24h)', value: 'total_volume' },
+                { text: 'نمودار هفتگی', value: 'sparkline_in_7d' },
             ],
             interval: null,
             loading: false,
@@ -67,7 +104,15 @@ export default {
                 sol: "سولانا",
                 dai: "دای",
                 avax: "اوالانچ"
-            }
+            },
+            showCurrency: 0,
+            currency: Intl.NumberFormat('en-US'),
+        }
+    },
+
+    computed:{
+        price() {
+            return price => this.showCurrency ? `$${this.currency.format(price)}` : `${this.currency.format(price * 32000)} تومان`
         }
     },
 
@@ -75,15 +120,7 @@ export default {
         this.fetch()
         this.interval = setInterval(() => {
             this.fetch()
-        }, 10000);
-        this.$axios.get('https://api.wallex.ir/v1/currencies/stats')
-        .then(res => {
-            let sag = [];
-            res.data.result.map(c => {
-                sag[c.key.toLowerCase()] = c.name
-            });
-            console.log(sag);
-        })
+        }, 15000);
     },
     
     beforeDestroy() {
@@ -93,7 +130,7 @@ export default {
     methods: {
         fetch() {
             // this.loading = true
-            this.$axios('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=true')
+            this.$axios('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=true&price_change_percentage=24h,7d')
             .then(res => {
                 this.data = res.data
                 // this.loading = false
@@ -122,8 +159,14 @@ export default {
 </script>
 <style lang="scss">
     .cryptomarket {
+            font-variation-settings: 'wght' 300;
         &.v-data-table > .v-data-table__wrapper > table > tbody > tr > td {
             height: 80px;
+        }
+        .percent {
+            font-variation-settings: 'wght' 500;
+            direction: ltr;
+            text-align: right;
         }
     }
 </style>
